@@ -247,10 +247,6 @@ private:
                       + std::to_string(protocol()));
         }
 
-        if (response.sw1 == ResponseApdu::WRONG_LE_LENGTH) {
-            THROW(Error, "Wrong LE length (SW1=0x6C) in response, please set LE");
-        }
-
         return response;
     }
 
@@ -317,7 +313,14 @@ ResponseApdu SmartCard::transmit(const CommandApdu& command) const
         THROW(std::logic_error, "Call SmartCard::transmit() inside a transaction");
     }
 
-    return card->transmitBytes(command.toBytes());
+    auto response = card->transmitBytes(command.toBytes());
+    if (response.sw1 == ResponseApdu::WRONG_LE_LENGTH) {
+        auto newCommand {command};
+        newCommand.le = response.sw2;
+        response = card->transmitBytes(newCommand.toBytes());
+    }
+
+    return response;
 }
 
 ResponseApdu SmartCard::transmitCTL(const CommandApdu& command, uint16_t lang, uint8_t minlen) const
