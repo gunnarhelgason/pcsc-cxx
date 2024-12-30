@@ -1,0 +1,6 @@
+*.swp
+tags
+build/
+cmake-build-debug/
+.vscode/
+*.user
