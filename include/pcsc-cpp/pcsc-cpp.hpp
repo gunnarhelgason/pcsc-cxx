@@ -188,6 +188,46 @@ struct CommandApdu
 
         return bytes;
     }
+
+    static CommandApdu fromBytes(const byte_vector& bytes, bool useLe = false)
+    {
+        if (bytes.size() < 4) {
+            throw std::invalid_argument("Command APDU must have > 3 bytes");
+        }
+
+        if (bytes.size() == 4) {
+            return CommandApdu {bytes[0], bytes[1], bytes[2], bytes[3]};
+        }
+
+        if (bytes.size() == 5) {
+            if (useLe) {
+                return CommandApdu {bytes[0], bytes[1],      bytes[2],
+                                    bytes[3], byte_vector(), bytes[4]};
+            } else {
+                throw std::invalid_argument("Command APDU size 5 is invalid without LE");
+            }
+        }
+
+        if (bytes.size() == 6 && useLe) {
+            throw std::invalid_argument("Command APDU size 6 uses LE");
+        }
+
+        // 0 - cla, 1 - ins, 2 - p1, 3 - p2, 4 - data size
+        // FIXME: can command chaining use byte 5 for data size too?
+        auto dataStart = bytes.cbegin() + 5;
+
+        if (useLe) {
+            return CommandApdu {bytes[0],
+                                bytes[1],
+                                bytes[2],
+                                bytes[3],
+                                byte_vector(dataStart, bytes.cend() - 1),
+                                *(bytes.cend() - 1)};
+        } else {
+            return CommandApdu {bytes[0], bytes[1], bytes[2], bytes[3],
+                                byte_vector(dataStart, bytes.cend())};
+        }
+    }
 };
 
 /** Opaque class that wraps the PC/SC smart card resources like card handle and I/O protocol. */
